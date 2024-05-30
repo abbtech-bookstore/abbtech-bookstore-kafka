@@ -1,0 +1,65 @@
+version: '3.9'
+services:
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    restart: "no"
+    networks:
+      - broker-kafka
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - ms_zookeeper:/var/lib/zookeeper
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    networks:
+      - broker-kafka
+    depends_on:
+      - zookeeper
+    restart: "no"
+    volumes:
+      - ms_kafka:/var/lib/kafka
+    ports:
+      - "2181:2181"
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://kafka:29092,EXTERNAL://localhost:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_ZOOKEEPER_SESSION_TIMEOUT: "6000"
+      KAFKA_RESTART_ATTEMPTS: "10"
+      KAFKA_RESTART_DELAY: "5"
+      ZOOKEEPER_AUTOPURGE_PURGE_INTERVAL: "0"
+
+  kafdrop:
+    image: robsonribeiro/kafdrop-arm64
+    networks:
+      - broker-kafka
+    restart: "no"
+    depends_on:
+      - "kafka"
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKERCONNECT: kafka:29092
+      JVM_OPTS: "-Xms16M -Xmx48M -Xss180K -XX:-TieredCompilation -XX:+UseStringDeduplication -noverify"
+    volumes:
+      - ms_kafdrop:/var/lib/kafdrop
+
+
+volumes:
+  ms_zookeeper:
+  ms_kafka:
+  ms_kafdrop:
+
+
+networks:
+  ms_network:
+  broker-kafka:
+    driver: bridge
+
